@@ -1,0 +1,17 @@
+[package]
+name = "fehler-macros"
+version = "0.1.0"
+authors = ["Without Boats <boats@mozilla.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "0.6.13"
+
+[dependencies.syn]
+features = ["default", "fold", "full"]
+version = "0.15.39"
