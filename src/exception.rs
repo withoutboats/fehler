@@ -1,4 +1,5 @@
 use std::any::TypeId;
+use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::mem;
@@ -26,9 +27,12 @@ impl Exception {
         E: Error + Send + Sync + 'static,
     {
         unsafe {
+            let backtrace = match error.backtrace() {
+                Some(_) => None,
+                None    => Some(Backtrace::capture()),
+            };
             let obj: TraitObject = mem::transmute(&error as &dyn Error);
             let vtable = obj.vtable;
-            let backtrace = Backtrace; // TODO
             let inner = InnerException { vtable, type_id, backtrace, error };
             Exception {
                 inner: mem::transmute(Box::new(inner))
@@ -37,7 +41,10 @@ impl Exception {
     }
 
     pub fn backtrace(&self) -> &Backtrace {
-        &self.inner.backtrace
+        // NB: this unwrap can only fail if the underlying error's backtrace method is
+        // nondeterministic, which would only happen in maliciously constructed code
+        self.inner.backtrace.as_ref().or_else(|| self.inner.error().backtrace())
+            .expect("exception backtrace capture failed")
     }
 
     pub fn errors(&self) -> Errors<'_> {
@@ -118,7 +125,7 @@ impl Drop for Exception {
 struct InnerException<E> {
     vtable: *const (),
     type_id: TypeId,
-    backtrace: Backtrace,
+    backtrace: Option<Backtrace>,
     error: E,
 }
 
@@ -164,8 +171,6 @@ impl InnerException<()> {
         }
     }
 }
-
-pub struct Backtrace;
 
 pub struct Errors<'a> {
     next: Option<&'a (dyn Error + 'static)>,

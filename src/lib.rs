@@ -1,3 +1,5 @@
+#![feature(backtrace)]
+
 mod exception;
 mod context;
 
