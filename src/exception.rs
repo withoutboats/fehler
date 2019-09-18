@@ -17,10 +17,10 @@ impl Exception {
         Exception::construct(error, TypeId::of::<E>())
     }
 
-    pub fn new_adhoc<M>(message: M) -> Exception where
+    pub fn new_adhoc<M>(message: M, file: &'static str, line: u32, column: u32) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
-        Exception::construct(MessageError(message), TypeId::of::<M>())
+        Exception::construct(MessageError(message, file, line, column), TypeId::of::<M>())
     }
 
     fn construct<E>(error: E, type_id: TypeId) -> Exception where
@@ -121,6 +121,7 @@ impl Drop for Exception {
     }
 }
 
+// repr C to ensure that `E` remains in the final position
 #[repr(C)]
 struct InnerException<E> {
     vtable: *const (),
@@ -129,18 +130,20 @@ struct InnerException<E> {
     error: E,
 }
 
+// repr C to ensure that transmuting from trait objects is safe
 #[repr(C)]
 struct TraitObject {
     data: *const (),
     vtable: *const (),
 }
 
-#[repr(transparent)]
-struct MessageError<M: Display + Debug>(M);
+// repr C to ensure that `M` remains in first position
+#[repr(C)]
+struct MessageError<M: Display + Debug>(M, &'static str, u32, u32);
 
 impl<M: Display + Debug> Debug for MessageError<M> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(&self.0, f)
+        write!(f, "{} ({}:{}:{})", &self.0, self.1, self.2, self.3)
     }
 }
 
