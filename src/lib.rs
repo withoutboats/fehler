@@ -5,7 +5,7 @@ mod exception;
 mod context;
 
 #[doc(inline)]
-pub use fehler_macros::throws;
+pub use fehler_macros::{throws, Error};
 
 pub use crate::as_error::AsError;
 pub use crate::exception::{Exception, Errors};
