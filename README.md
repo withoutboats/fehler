@@ -75,7 +75,6 @@ contains a `context` method for injecting context around an error.
 
 # TODO
 
-* Backtraces (partially blocked on std fully implementing RFC 2504)
 * Error derive
 * Possibly add a Display derive
 * Make throws work on closures and async blocks (attributes are not allowed on
