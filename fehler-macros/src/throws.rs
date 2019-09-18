@@ -35,31 +35,29 @@ impl Fold for Throws {
         if !self.outer_fn { return i; }
         self.outer_fn = false;
 
-        modify_tail(is_unit_fn(&i.decl.output), &mut i.block.stmts);
+        modify_tail(is_unit_fn(&i.sig.output), &mut i.block.stmts);
 
-        let decl = Box::new(syn::FnDecl {
-            output: self.fold_return_type(i.decl.output),
-            ..*i.decl
-        });
+        let sig = syn::Signature {
+            output: self.fold_return_type(i.sig.output),
+            ..i.sig
+        };
 
 
         let block = Box::new(self.fold_block(*i.block));
 
-        syn::ItemFn { decl, block, ..i }
+        syn::ItemFn { sig, block, ..i }
     }
 
     fn fold_impl_item_method(&mut self, mut i: syn::ImplItemMethod) -> syn::ImplItemMethod {
         if !self.outer_fn { return i; }
         self.outer_fn = false;
 
-        modify_tail(is_unit_fn(&i.sig.decl.output), &mut i.block.stmts);
+        modify_tail(is_unit_fn(&i.sig.output), &mut i.block.stmts);
 
-        let decl = syn::FnDecl {
-            output: self.fold_return_type(i.sig.decl.output),
-            ..i.sig.decl
+        let sig = syn::Signature {
+            output: self.fold_return_type(i.sig.output),
+            ..i.sig
         };
-
-        let sig = syn::MethodSig { decl, ..i.sig };
 
         let block = self.fold_block(i.block);
 
@@ -71,26 +69,24 @@ impl Fold for Throws {
         self.outer_fn = false;
 
         let default = i.default.take().map(|mut block| {
-            modify_tail(is_unit_fn(&i.sig.decl.output), &mut block.stmts);
+            modify_tail(is_unit_fn(&i.sig.output), &mut block.stmts);
             self.fold_block(block)
         });
 
-        let decl = syn::FnDecl {
-            output: self.fold_return_type(i.sig.decl.output),
-            ..i.sig.decl
+        let sig = syn::Signature {
+            output: self.fold_return_type(i.sig.output),
+            ..i.sig
         };
-
-        let sig = syn::MethodSig { decl, ..i.sig };
 
         syn::TraitItemMethod { sig, default, ..i }
     }
 
     fn fold_expr_closure(&mut self, i: syn::ExprClosure) -> syn::ExprClosure {
-        i
+        i // TODO
     }
 
     fn fold_expr_async(&mut self, i: syn::ExprAsync) -> syn::ExprAsync {
-        i
+        i // TODO
     }
 
     fn fold_return_type(&mut self, i: syn::ReturnType) -> syn::ReturnType {
