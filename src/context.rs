@@ -1,3 +1,4 @@
+use std::backtrace::Backtrace;
 use std::fmt::{self, Debug, Display};
 use std::error::Error;
 
@@ -37,6 +38,10 @@ impl<E, C: Display> Display for Context<E, C> {
 }
 
 impl<E: Error + 'static, C: Display> Error for Context<E, C> {
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.error.backtrace()
+    }
+
     fn cause(&self) -> Option<&dyn Error> {
         Some(&self.error)
     }
@@ -47,6 +52,10 @@ impl<E: Error + 'static, C: Display> Error for Context<E, C> {
 }
 
 impl<C: Display> Error for Context<Exception, C> {
+    fn backtrace(&self) -> Option<&Backtrace> {
+        Some(self.error.backtrace())
+    }
+
     fn cause(&self) -> Option<&dyn Error> {
         Some(&*self.error)
     }
