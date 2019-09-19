@@ -75,8 +75,6 @@ contains a `context` method for injecting context around an error.
 
 # TODO
 
-* Error derive
 * Possibly add a Display derive
 * Make throws work on closures and async blocks (attributes are not allowed on
   expressions on stable)
-* Figure out best Debug and Display impls for Exception and Context
