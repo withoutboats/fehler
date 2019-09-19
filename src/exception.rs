@@ -1,20 +1,10 @@
 use std::any::TypeId;
-use std::backtrace::Backtrace;
+use std::backtrace::{Backtrace, BacktraceStatus};
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
-
-impl<M: Display + Debug + 'static> ErrorExt for MessageError<M> {
-    fn type_id(&self) -> TypeId {
-        TypeId::of::<M>()
-    }
-
-    fn is_adhoc(&self) -> bool {
-        true
-    }
-}
 
 pub struct Exception {
     inner: Box<InnerException<()>>,
@@ -120,20 +110,33 @@ impl Debug for Exception {
         if self.is_adhoc() {
             writeln!(f, "error: {:?}\n", self.inner.error())?;
         } else {
-            writeln!(f, "error: {}\n", self.inner.error())?;
+            writeln!(f, "error: {}", self.inner.error())?;
         }
 
-        let errors: Vec<&(dyn Error + 'static)> = self.errors().skip(1).collect();
+        let mut errors = self.errors().skip(1).enumerate();
 
-        if !errors.is_empty() {
-            writeln!(f, "error causes:")?;
-            for (n, error) in errors.into_iter().rev().enumerate() {
-                writeln!(f, "{}: {}", n, error)?;
+        if let Some((n, error)) = errors.next() {
+            writeln!(f, "\ncaused by:")?;
+            writeln!(f, "\t{}: {}", n, error)?;
+            for (n, error) in errors {
+                writeln!(f, "\t{}: {}", n, error)?;
             }
-            writeln!(f, "\n")?;
         }
 
-        writeln!(f, "{}", self.backtrace())
+        let backtrace = self.backtrace();
+
+        match backtrace.status() {
+            BacktraceStatus::Captured       => {
+                writeln!(f, "\n{}", backtrace)?;
+            }
+            BacktraceStatus::Disabled       => {
+                writeln!(f, "backtrace disabled; run with RUST_BACKTRACE=1 environment variable \
+                             to display a backtrace")?;
+            }
+            _                               => { }
+        }
+
+        Ok(())
     }
 }
 
