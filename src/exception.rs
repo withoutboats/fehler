@@ -6,6 +6,16 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 
+impl<M: Display + Debug + 'static> ErrorExt for MessageError<M> {
+    fn type_id(&self) -> TypeId {
+        TypeId::of::<M>()
+    }
+
+    fn is_adhoc(&self) -> bool {
+        true
+    }
+}
+
 pub struct Exception {
     inner: Box<InnerException<()>>,
 }
@@ -18,10 +28,10 @@ impl Exception {
     }
 
     #[doc(hidden)]
-    pub fn new_adhoc<M>(message: M, file: &'static str, line: u32) -> Exception where
+    pub fn new_adhoc<M>(message: M) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
-        Exception::construct(MessageError(message, file, line), TypeId::of::<M>(), 1)
+        Exception::construct(MessageError(message), TypeId::of::<M>(), 1)
     }
 
     fn construct<E>(error: E, type_id: TypeId, is_adhoc: usize) -> Exception where
@@ -159,13 +169,12 @@ struct TraitObject {
     vtable: *const (),
 }
 
-// repr C to ensure that `M` remains in first position
-#[repr(C)]
-struct MessageError<M: Display + Debug>(M, &'static str, u32);
+#[repr(transparent)]
+struct MessageError<M: Display + Debug>(M);
 
 impl<M: Display + Debug> Debug for MessageError<M> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} (at {}:{})", &self.0, self.1, self.2)
+        Debug::fmt(&self.0, f)
     }
 }
 
@@ -175,7 +184,7 @@ impl<M: Display + Debug> Display for MessageError<M> {
     }
 }
 
-impl<M: Display + Debug> Error for MessageError<M> { }
+impl<M: Display + Debug + 'static> Error for MessageError<M> { }
 
 impl InnerException<()> {
     fn error(&self) -> &(dyn Error + Send + Sync + 'static) {
