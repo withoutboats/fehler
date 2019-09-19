@@ -17,6 +17,7 @@ impl Exception {
         Exception::construct(error, TypeId::of::<E>())
     }
 
+    #[doc(hidden)]
     pub fn new_adhoc<M>(message: M, file: &'static str, line: u32, column: u32) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
@@ -163,7 +164,7 @@ struct MessageError<M: Display + Debug>(M, &'static str, u32, u32);
 
 impl<M: Display + Debug> Debug for MessageError<M> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} ({}:{}:{})", &self.0, self.1, self.2, self.3)
+        write!(f, "{} (at {}:{}:{})", &self.0, self.1, self.2, self.3)
     }
 }
 
