@@ -40,6 +40,10 @@ impl Exception {
         }
     }
 
+    fn is_adhoc(&self) -> bool {
+        self.inner.type_id != self.inner.error().type_id(unsafe { mem::transmute(()) })
+    }
+
     pub fn backtrace(&self) -> &Backtrace {
         // NB: this unwrap can only fail if the underlying error's backtrace method is
         // nondeterministic, which would only happen in maliciously constructed code
@@ -102,13 +106,29 @@ impl DerefMut for Exception {
 
 impl Debug for Exception {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TODO")
+        if self.is_adhoc() {
+            writeln!(f, "error: {:?}\n", self.inner.error())?;
+        } else {
+            writeln!(f, "error: {}\n", self.inner.error())?;
+        }
+
+        let errors: Vec<&(dyn Error + 'static)> = self.errors().skip(1).collect();
+
+        if !errors.is_empty() {
+            writeln!(f, "error causes:")?;
+            for (n, error) in errors.into_iter().rev().enumerate() {
+                writeln!(f, "{}: {}", n, error)?;
+            }
+            writeln!(f, "\n")?;
+        }
+
+        writeln!(f, "{}", self.backtrace())
     }
 }
 
 impl Display for Exception {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TODO")
+        write!(f, "{}", self.inner.error())
     }
 }
 
