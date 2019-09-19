@@ -18,10 +18,10 @@ impl Exception {
     }
 
     #[doc(hidden)]
-    pub fn new_adhoc<M>(message: M, file: &'static str, line: u32, column: u32) -> Exception where
+    pub fn new_adhoc<M>(message: M, file: &'static str, line: u32) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
-        Exception::construct(MessageError(message, file, line, column), TypeId::of::<M>())
+        Exception::construct(MessageError(message, file, line), TypeId::of::<M>())
     }
 
     fn construct<E>(error: E, type_id: TypeId) -> Exception where
@@ -160,11 +160,11 @@ struct TraitObject {
 
 // repr C to ensure that `M` remains in first position
 #[repr(C)]
-struct MessageError<M: Display + Debug>(M, &'static str, u32, u32);
+struct MessageError<M: Display + Debug>(M, &'static str, u32);
 
 impl<M: Display + Debug> Debug for MessageError<M> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} (at {}:{}:{})", &self.0, self.1, self.2, self.3)
+        write!(f, "{} (at {}:{})", &self.0, self.1, self.2)
     }
 }
 

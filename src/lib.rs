@@ -18,6 +18,6 @@ macro_rules! throw {
 
 #[macro_export]
 macro_rules! err {
-    ($e:expr)   => { $crate::Exception::new_adhoc($e, file!(), line!(), column!()) };
+    ($e:expr)   => { $crate::Exception::new_adhoc($e, file!(), line!()) };
     ($($arg:tt)*) => { $crate::Exception::new_adhoc(format!($($arg)*, file!(), line!(), column!())) };
 }
