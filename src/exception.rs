@@ -14,17 +14,17 @@ impl Exception {
     pub fn new<E>(error: E) -> Exception where
         E: Error + Send + Sync + 'static
     {
-        Exception::construct(error, TypeId::of::<E>(), 0)
+        Exception::construct(error, TypeId::of::<E>())
     }
 
     #[doc(hidden)]
     pub fn new_adhoc<M>(message: M) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
-        Exception::construct(MessageError(message), TypeId::of::<M>(), 1)
+        Exception::construct(MessageError(message), TypeId::of::<M>())
     }
 
-    fn construct<E>(error: E, type_id: TypeId, is_adhoc: usize) -> Exception where
+    fn construct<E>(error: E, type_id: TypeId) -> Exception where
         E: Error + Send + Sync + 'static,
     {
         unsafe {
@@ -34,15 +34,11 @@ impl Exception {
             };
             let obj: TraitObject = mem::transmute(&error as &dyn Error);
             let vtable = obj.vtable;
-            let inner = InnerException { vtable, type_id, is_adhoc, backtrace, error };
+            let inner = InnerException { vtable, type_id, backtrace, error };
             Exception {
                 inner: mem::transmute(Box::new(inner))
             }
         }
-    }
-
-    fn is_adhoc(&self) -> bool {
-        self.inner.is_adhoc != 0
     }
 
     pub fn backtrace(&self) -> &Backtrace {
@@ -107,11 +103,7 @@ impl DerefMut for Exception {
 
 impl Debug for Exception {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_adhoc() {
-            writeln!(f, "error: {:?}\n", self.inner.error())?;
-        } else {
-            writeln!(f, "error: {}", self.inner.error())?;
-        }
+        writeln!(f, "error: {}", self.inner.error())?;
 
         let mut errors = self.errors().skip(1).enumerate();
 
@@ -130,7 +122,7 @@ impl Debug for Exception {
                 writeln!(f, "\n{}", backtrace)?;
             }
             BacktraceStatus::Disabled       => {
-                writeln!(f, "backtrace disabled; run with RUST_BACKTRACE=1 environment variable \
+                writeln!(f, "\nbacktrace disabled; run with RUST_BACKTRACE=1 environment variable \
                              to display a backtrace")?;
             }
             _                               => { }
@@ -161,7 +153,6 @@ struct InnerException<E> {
     vtable: *const (),
     type_id: TypeId,
     backtrace: Option<Backtrace>,
-    is_adhoc: usize,
     error: E,
 }
 
