@@ -1,4 +1,4 @@
-#![feature(backtrace)]
+#![feature(backtrace, error_type_id)]
 
 mod as_error;
 mod exception;
