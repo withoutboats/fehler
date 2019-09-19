@@ -14,17 +14,17 @@ impl Exception {
     pub fn new<E>(error: E) -> Exception where
         E: Error + Send + Sync + 'static
     {
-        Exception::construct(error, TypeId::of::<E>())
+        Exception::construct(error, TypeId::of::<E>(), 0)
     }
 
     #[doc(hidden)]
     pub fn new_adhoc<M>(message: M, file: &'static str, line: u32) -> Exception where
         M: Display + Debug + Send + Sync + 'static
     {
-        Exception::construct(MessageError(message, file, line), TypeId::of::<M>())
+        Exception::construct(MessageError(message, file, line), TypeId::of::<M>(), 1)
     }
 
-    fn construct<E>(error: E, type_id: TypeId) -> Exception where
+    fn construct<E>(error: E, type_id: TypeId, is_adhoc: usize) -> Exception where
         E: Error + Send + Sync + 'static,
     {
         unsafe {
@@ -34,7 +34,7 @@ impl Exception {
             };
             let obj: TraitObject = mem::transmute(&error as &dyn Error);
             let vtable = obj.vtable;
-            let inner = InnerException { vtable, type_id, backtrace, error };
+            let inner = InnerException { vtable, type_id, is_adhoc, backtrace, error };
             Exception {
                 inner: mem::transmute(Box::new(inner))
             }
@@ -42,7 +42,7 @@ impl Exception {
     }
 
     fn is_adhoc(&self) -> bool {
-        self.inner.type_id != self.inner.error().type_id(unsafe { mem::transmute(()) })
+        self.inner.is_adhoc != 0
     }
 
     pub fn backtrace(&self) -> &Backtrace {
@@ -148,6 +148,7 @@ struct InnerException<E> {
     vtable: *const (),
     type_id: TypeId,
     backtrace: Option<Backtrace>,
+    is_adhoc: usize,
     error: E,
 }
 
