@@ -9,7 +9,7 @@ pub use fehler_macros::{throws, Error};
 
 pub use crate::as_error::AsError;
 pub use crate::exception::{Exception, Errors};
-pub use crate::context::ResultExt;
+pub use crate::context::Context;
 
 #[macro_export]
 macro_rules! throw {

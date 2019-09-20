@@ -4,40 +4,40 @@ use std::error::Error;
 
 use crate::Exception;
 
-pub trait ResultExt<T> {
+pub trait Context<T> {
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception>;
 }
 
-impl<T, E: Error + Send + Sync + 'static> ResultExt<T> for Result<T, E> {
+impl<T, E: Error + Send + Sync + 'static> Context<T> for Result<T, E> {
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception> {
-        self.map_err(|error| Exception::from(Context { error, context }))
+        self.map_err(|error| Exception::from(ContextError { error, context }))
     }
 }
 
-impl<T> ResultExt<T> for Result<T, Exception> {
+impl<T> Context<T> for Result<T, Exception> {
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception> {
-        self.map_err(|error| Exception::from(Context { error, context }))
+        self.map_err(|error| Exception::from(ContextError { error, context }))
     }
 }
 
-struct Context<E, C> {
+struct ContextError<E, C> {
     error: E,
     context: C,
 }
 
-impl<E: Debug, C: Display> Debug for Context<E, C> {
+impl<E: Debug, C: Display> Debug for ContextError<E, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}\n\n{}", self.error, self.context)
     }
 }
 
-impl<E, C: Display> Display for Context<E, C> {
+impl<E, C: Display> Display for ContextError<E, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.context, f)
     }
 }
 
-impl<E: Error + 'static, C: Display> Error for Context<E, C> {
+impl<E: Error + 'static, C: Display> Error for ContextError<E, C> {
     fn backtrace(&self) -> Option<&Backtrace> {
         self.error.backtrace()
     }
@@ -51,7 +51,7 @@ impl<E: Error + 'static, C: Display> Error for Context<E, C> {
     }
 }
 
-impl<C: Display> Error for Context<Exception, C> {
+impl<C: Display> Error for ContextError<Exception, C> {
     fn backtrace(&self) -> Option<&Backtrace> {
         Some(self.error.backtrace())
     }
