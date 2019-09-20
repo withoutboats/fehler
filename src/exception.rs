@@ -6,11 +6,26 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 
+/// The `Exception type, a wrapper around a dynamic error type.
+///
+/// `Exception` functions a lot like `Box<dyn Error>`, with these differences:
+///
+/// - `Exception` requires that the error is `Send`, `Sync`, and `'static`
+/// - `Exception` guarantees that a backtrace will exist, even if the error type
+///   did not provide one
+/// - `Exception` is represented as a narrow pointer - exactly one word in size,
+///   instead of two.
 pub struct Exception {
     inner: Box<InnerException<()>>,
 }
 
 impl Exception {
+    /// Create a new exception from any error type.
+    ///
+    /// The error type must be threadsafe and `'static`, so that the `Exception` will be as well.
+    ///
+    /// If the error type does not provide a backtrace, a backtrace will be created here to ensure
+    /// that a backtrace exists.
     pub fn new<E>(error: E) -> Exception where
         E: Error + Send + Sync + 'static
     {
@@ -41,6 +56,17 @@ impl Exception {
         }
     }
 
+    /// View this exception as the underlying error.
+    pub fn as_error(&self) -> &(dyn Error + Send + Sync + 'static) {
+        &**self
+    }
+
+    /// View this exception as the underlying error, mutably.
+    pub fn as_error_mut(&mut self) -> &mut (dyn Error + Send + Sync + 'static) {
+        &mut **self
+    }
+
+    /// Get the backtrace for this Exception.
     pub fn backtrace(&self) -> &Backtrace {
         // NB: this unwrap can only fail if the underlying error's backtrace method is
         // nondeterministic, which would only happen in maliciously constructed code
@@ -48,14 +74,20 @@ impl Exception {
             .expect("exception backtrace capture failed")
     }
 
+    /// An iterator of errors contained by this Exception.
+    ///
+    /// This iterator will visit every error in the "cause chain" of this exception, beginning with
+    /// the error that this exception was created from.
     pub fn errors(&self) -> Errors<'_> {
         Errors { next: Some(self.inner.error()) }
     }
 
+    /// Returns `true` if `E` is the type wrapped by this exception.
     pub fn is<E: Display + Debug + Send + Sync + 'static>(&self) -> bool {
         TypeId::of::<E>() == self.inner.type_id
     }
 
+    /// Attempt to downcast the exception to a concrete type.
     pub fn downcast<E: Display + Debug + Send + Sync + 'static>(self) -> Result<E, Exception> {
         if let Some(error) = self.downcast_ref::<E>() {
             unsafe {
@@ -69,12 +101,14 @@ impl Exception {
         }
     }
 
+    /// Downcast this exception by reference.
     pub fn downcast_ref<E: Display + Debug + Send + Sync + 'static>(&self) -> Option<&E> {
         if self.is::<E>() {
             unsafe { Some(&*(self.inner.error() as *const dyn Error as *const E)) }
         } else { None }
     }
 
+    /// Downcast this exception by mutable reference.
     pub fn downcast_mut<E: Display + Debug + Send + Sync + 'static>(&mut self) -> Option<&mut E> {
         if self.is::<E>() {
             unsafe { Some(&mut *(self.inner.error_mut() as *mut dyn Error as *mut E)) }
@@ -200,6 +234,7 @@ impl InnerException<()> {
     }
 }
 
+/// Iterator of errors in an `Exception`.
 pub struct Errors<'a> {
     next: Option<&'a (dyn Error + 'static)>,
 }

@@ -2,7 +2,9 @@ use std::error::Error;
 
 use crate::Exception;
 
+/// View type as an error object.
 pub trait AsError {
+    /// View type as an error object.
     fn as_error(&self) -> &(dyn Error + Send + Sync + 'static);
 }
 

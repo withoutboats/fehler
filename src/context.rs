@@ -4,7 +4,9 @@ use std::error::Error;
 
 use crate::Exception;
 
+/// Provides the `context` method for `Result`.
 pub trait Context<T> {
+    /// Wrap the error value with additional context.
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception>;
 }
 
