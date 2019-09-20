@@ -137,7 +137,7 @@ impl DerefMut for Exception {
 
 impl Debug for Exception {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "error: {}", self.inner.error())?;
+        writeln!(f, "{}", self.inner.error())?;
 
         let mut errors = self.errors().skip(1).enumerate();
 
