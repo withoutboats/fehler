@@ -6,5 +6,6 @@ edition = "2018"
 
 [dependencies.fehler-macros]
 path = "./fehler-macros"
+version = "0.1.0-alpha.0"
 
 [workspace]
