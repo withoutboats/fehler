@@ -5,7 +5,7 @@ Der Fehler is a small but very opinionated Rust error handling library.
 In many ways, der Fehler is a successor to failure. However, unlike failure,
 der Fehler is built around the standard library's `Error` trait, which has
 adopted the necessary improvements that the `Fail` trait had provided thanks to
-RFC 2504.
+[RFC 2504](https://github.com/rust-lang/rfcs/blob/master/text/2504-fix-error.md).
 
 Der Fehler provocatively and unapologetically uses the terminology of
 exceptions.
