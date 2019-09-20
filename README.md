@@ -63,14 +63,14 @@ fn bar(x: bool) -> Result<i32, i32> {
 }
 ```
 
-### The `err!` macro
+### The `error!` macro
 
 This macro constructs an ad hoc error from format strings, similar to the
 `format!` macro.
 
-### `ResultExt` and `context`
+### The `Context` trait
 
-This crate also defines a `ResultExt` extension to the `Result` type, which
+This crate also defines a `Context` trait for the `Result` type, which
 contains a `context` method for injecting context around an error.
 
 # TODO
