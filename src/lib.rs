@@ -32,7 +32,7 @@ pub use crate::context::Context;
 /// This macro is equivalent to `Err($err)?`.
 #[macro_export]
 macro_rules! throw {
-    ($err:expr)   => (::std::result::Result::<(), _>::Err($err)?);
+    ($err:expr)   => (return std::result::Result::Err(std::convert::From::from($err)))
 }
 
 /// Construct an ad-hoc exception from a string.
