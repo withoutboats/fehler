@@ -5,20 +5,39 @@ use std::error::Error;
 use crate::Exception;
 
 /// Provides the `context` method for `Result`.
-pub trait Context<T> {
+pub trait Context<T, E> {
     /// Wrap the error value with additional context.
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception>;
+
+    /// Wrap the error value with additional context lazily.
+    fn with_context<C, F>(self, f: F) -> Result<T, Exception> where
+        C: Display + Send + Sync + 'static,
+        F: FnOnce(&E) -> C;
 }
 
-impl<T, E: Error + Send + Sync + 'static> Context<T> for Result<T, E> {
+impl<T, E: Error + Send + Sync + 'static> Context<T, E> for Result<T, E> {
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception> {
         self.map_err(|error| Exception::from(ContextError { error, context }))
     }
+
+    fn with_context<C, F>(self, f: F) -> Result<T, Exception> where
+        C: Display + Send + Sync + 'static,
+        F: FnOnce(&E) -> C
+    {
+        self.map_err(|error| Exception::from(ContextError { context: f(&error), error }))
+    }
 }
 
-impl<T> Context<T> for Result<T, Exception> {
+impl<T> Context<T, Exception> for Result<T, Exception> {
     fn context<C: Display + Send + Sync + 'static>(self, context: C) -> Result<T, Exception> {
         self.map_err(|error| Exception::from(ContextError { error, context }))
+    }
+
+    fn with_context<C, F>(self, f: F) -> Result<T, Exception> where
+        C: Display + Send + Sync + 'static,
+        F: FnOnce(&Exception) -> C
+    {
+        self.map_err(|error| Exception::from(ContextError { context: f(&error), error }))
     }
 }
 
