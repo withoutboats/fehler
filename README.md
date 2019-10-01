@@ -1,5 +1,7 @@
 # Der Fehler
 
+[![Documentation](https://docs.rs/fehler/badge.svg)](https://docs.rs/fehler/*/fehler/)
+
 Der Fehler is a small but very opinionated Rust error handling library.
 
 In many ways, der Fehler is a successor to failure. However, unlike failure,
