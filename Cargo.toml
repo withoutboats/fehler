@@ -1,6 +1,6 @@
 [package]
 name = "fehler"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 edition = "2018"
 authors = ["Without Boats <boats@mozilla.com>"]
 license = "MIT OR Apache-2.0"
@@ -10,6 +10,6 @@ repository = "https://github.com/withoutboats/fehler"
 
 [dependencies.fehler-macros]
 path = "./fehler-macros"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 
 [workspace]
