@@ -1,5 +1,7 @@
 # Der Fehler
 
+[![Documentation](https://docs.rs/fehler/badge.svg)](https://docs.rs/fehler/*/fehler/)
+
 Der Fehler is a library to add support for "throwing functions" to Rust through
 procedural macros. Functions marked with the `throws` attribute return
 `Result`, but the "Ok" path is used by default and you don't need to wrap ok
