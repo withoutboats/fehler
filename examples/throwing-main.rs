@@ -1,12 +1,18 @@
 use fehler::*;
 
-#[throws]
+#[derive(Debug)]
+struct Error;
+
+#[throws(_)]
 fn do_it() -> i32 {
-    throw!(error!("oops, an error occurred"));
+    if true {
+        throw!(Error);
+    }
+
     0
 }
 
-#[throws]
+#[throws(_)]
 fn main() {
-    do_it().context("do it failed")?;
+    do_it()?;
 }

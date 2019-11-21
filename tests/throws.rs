@@ -1,30 +1,32 @@
 use fehler::*;
 
-#[throws]
+type Error = ();
+
+#[throws(_)]
 pub fn unit_fn() { }
 
-#[throws]
+#[throws(_)]
 pub fn returns_fn() -> i32 {
     return 0;
 }
 
-#[throws]
+#[throws(_)]
 pub fn returns_unit_fn() {
     if true { return; }
 }
 
-#[throws]
+#[throws(_)]
 pub fn explicit_unit() -> () { }
 
-#[throws]
+#[throws(_)]
 pub fn tail_returns_value() -> i32 {
     0
 }
 
-#[throws]
+#[throws(_)]
 pub async fn async_fn() { }
 
-#[throws]
+#[throws(_)]
 pub async fn async_fn_with_ret() -> i32 {
     0
 }
@@ -50,27 +52,27 @@ pub fn throws_generics<E>() { }
 pub struct Foo;
 
 impl Foo {
-    #[throws]
+    #[throws(_)]
     pub fn static_method() { }
 
-    #[throws]
+    #[throws(_)]
     pub fn bar(&self) -> i32 { if true { return 1; } 0 }
 }
 
 
-#[throws]
+#[throws(_)]
 pub fn has_inner_fn() {
     fn inner_fn() -> i32 { 0 }
     let _: i32 = inner_fn();
 }
 
-#[throws]
+#[throws(_)]
 pub fn has_inner_closure() {
     let f = || 0;
     let _: i32 = f();
 }
 
-#[throws]
+#[throws(_)]
 pub async fn has_inner_async_block() {
     let f = async { 0 };
     let _: i32 = f.await;

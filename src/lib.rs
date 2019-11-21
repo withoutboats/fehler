@@ -1,9 +1,3 @@
-#![feature(backtrace)]
-
-mod as_error;
-mod exception;
-mod context;
-
 #[doc(inline)]
 /// Annotations a function that "throws" a Result.
 ///
@@ -11,36 +5,35 @@ mod context;
 /// but you don't need to wrap the successful return values in `Ok`.
 ///
 /// `throws` can optionally take a type as an argument, which will be the error type returned by
-/// this function. By default, the function will throw `Exception`.
+/// this function. By default, the function will throw this crate's "default error type." (see
+/// below).
+///
+/// # Default Error Type
+///
+/// This macro supports a "default error type," if you give the macro `_` instead of a type name.
+/// The default error type will be whatever the path `crate::Error` resolves to: so if you have
+/// a type called `Error` in your crate root, that is the type the macro will use by default.
+///
+/// You can define your own error in your crate root, or you can use a type alias.
+///
+/// # Example
+///
+/// ```should_panic
+/// // Set the default error type for this crate:
+/// type Error = std::io::Error;
+///
+/// #[fehler::throws(_)]
+/// fn main() {
+///    let file = std::fs::read_to_string("my_file.txt")?;
+///    println!("{}", file);
+/// }
+/// ```
 pub use fehler_macros::throws;
-
-#[doc(inline)]
-/// Derive for the Error trait.
-///
-/// If the type contains a `Backtrace`, it will generate the `backtrace` method to find it.
-///
-/// If this wraps a different, underlying error, you can tag that field with `#[error::source]`,
-/// which will generate the `cause` and `source` methods correctly.
-pub use fehler_macros::Error;
-
-pub use crate::as_error::AsError;
-pub use crate::exception::{Exception, Errors};
-pub use crate::context::Context;
 
 /// Throw an error.
 ///
 /// This macro is equivalent to `Err($err)?`.
 #[macro_export]
 macro_rules! throw {
-    ($err:expr)   => (return std::result::Result::Err(std::convert::From::from($err)))
-}
-
-/// Construct an ad-hoc exception from a string.
-///
-/// This evaluates to an `Exception`. It can take either just a string, or a format string with
-/// arguments. It also can take any custom type which implements `Debug` and `Display`.
-#[macro_export]
-macro_rules! error {
-    ($e:expr)   => { $crate::Exception::new_adhoc($e) };
-    ($($arg:tt)*) => { $crate::Exception::new_adhoc(format!($($arg)*)) };
+    ($err:expr)   => (return ::core::result::Result::Err(::core::convert::From::from($err)))
 }

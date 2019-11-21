@@ -7,13 +7,14 @@ struct Throws {
 }
 
 pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
-    let ty = if args.is_empty() {
-        syn::parse2(quote::quote!(::fehler::Exception)).unwrap()
-    } else {
-        syn::parse(args).unwrap_or_else(|_| {
-            panic!("argument to #[throws] attribute must be a type")
-        })
-    };
+    let mut ty = syn::parse(args).unwrap_or_else(|_| {
+        panic!("argument to #[throws] attribute must be a type")
+    });
+
+    if let syn::Type::Infer(_) = ty {
+        ty = syn::parse2(quote::quote!(crate::Error)).unwrap();
+    }
+
     let mut throws = Throws { ty, outer_fn: true };
 
     if let Ok(item_fn) = syn::parse(input.clone()) {
@@ -93,10 +94,10 @@ impl Fold for Throws {
         let error = &self.ty;
         match i {
             syn::ReturnType::Default        => {
-                syn::parse2(quote::quote!(-> ::std::result::Result<(), #error>)).unwrap()
+                syn::parse2(quote::quote!(-> ::core::result::Result<(), #error>)).unwrap()
             }
             syn::ReturnType::Type(arrow, ty)    => {
-                let result = syn::parse2(quote::quote!(::std::result::Result<#ty, #error>)).unwrap();
+                let result = syn::parse2(quote::quote!(::core::result::Result<#ty, #error>)).unwrap();
                 syn::ReturnType::Type(arrow, result)
             }
         }
@@ -104,8 +105,8 @@ impl Fold for Throws {
 
     fn fold_expr_return(&mut self, i: syn::ExprReturn) -> syn::ExprReturn {
         let ok = match &i.expr {
-            Some(expr)  => syn::parse2(quote::quote!(::std::result::Result::Ok(#expr))).unwrap(),
-            None        => syn::parse2(quote::quote!(::std::result::Result::Ok(()))).unwrap(),
+            Some(expr)  => syn::parse2(quote::quote!(::core::result::Result::Ok(#expr))).unwrap(),
+            None        => syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap(),
         };
         syn::ExprReturn { expr: Some(Box::new(ok)), ..i }
     }
@@ -120,13 +121,13 @@ fn modify_tail(is_unit_fn: bool, stmts: &mut Vec<syn::Stmt>) {
             let new = syn::parse2(quote::quote!(#e;)).unwrap();
             stmts.pop();
             stmts.push(new);
-            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::std::result::Result::Ok(()))).unwrap()));
+            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap()));
         }
         Some(syn::Stmt::Expr(e))    => {
-            *e = syn::parse2(quote::quote!(::std::result::Result::Ok(#e))).unwrap();
+            *e = syn::parse2(quote::quote!(::core::result::Result::Ok(#e))).unwrap();
         }
         _ if is_unit_fn             => {
-            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::std::result::Result::Ok(()))).unwrap()));
+            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap()));
         }
         _                           => { }
     }
