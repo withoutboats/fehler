@@ -13,7 +13,6 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0.0"
-synstructure = "0.12.0"
 proc-macro2 = "1.0.0"
 
 [dependencies.syn]
