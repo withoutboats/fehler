@@ -1,33 +1,38 @@
+// This module implements the Throws folder.
+//
+// The Throws folder actually visits the item being processed and performs two
+// processes:
+// - It ok wraps return expressions and inserts terminal Ok(())s.
+// - It delegates return type rewriting to the Args type.
+
 use proc_macro::*;
 use syn::fold::Fold;
 
-struct Throws {
-    ty: syn::Type,
+use crate::Args;
+
+pub struct Throws {
+    args: Args,
     outer_fn: bool,
 }
 
-pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
-    let mut ty = syn::parse(args).unwrap_or_else(|_| {
-        panic!("argument to #[throws] attribute must be a type")
-    });
-
-    if let syn::Type::Infer(_) = ty {
-        ty = syn::parse2(quote::quote!(crate::Error)).unwrap();
+impl Throws {
+    pub fn new(args: Args) -> Throws {
+        Throws { args, outer_fn: true }
     }
 
-    let mut throws = Throws { ty, outer_fn: true };
-
-    if let Ok(item_fn) = syn::parse(input.clone()) {
-        let item_fn = throws.fold_item_fn(item_fn);
-        quote::quote!(#item_fn).into()
-    } else if let Ok(method) = syn::parse(input.clone()) {
-        let method = throws.fold_impl_item_method(method);
-        quote::quote!(#method).into()
-    } else if let Ok(method) = syn::parse(input.clone()) {
-        let method = throws.fold_trait_item_method(method);
-        quote::quote!(#method).into()
-    } else {
-        panic!("#[throws] attribute can only be applied to functions and methods")
+    pub fn fold(&mut self, input: TokenStream) -> TokenStream {
+        if let Ok(item_fn) = syn::parse(input.clone()) {
+            let item_fn = self.fold_item_fn(item_fn);
+            quote::quote!(#item_fn).into()
+        } else if let Ok(method) = syn::parse(input.clone()) {
+            let method = self.fold_impl_item_method(method);
+            quote::quote!(#method).into()
+        } else if let Ok(method) = syn::parse(input.clone()) {
+            let method = self.fold_trait_item_method(method);
+            quote::quote!(#method).into()
+        } else {
+            panic!("#[throws] attribute can only be applied to functions and methods")
+        }
     }
 }
 
@@ -91,22 +96,13 @@ impl Fold for Throws {
     }
 
     fn fold_return_type(&mut self, i: syn::ReturnType) -> syn::ReturnType {
-        let error = &self.ty;
-        match i {
-            syn::ReturnType::Default        => {
-                syn::parse2(quote::quote!(-> ::core::result::Result<(), #error>)).unwrap()
-            }
-            syn::ReturnType::Type(arrow, ty)    => {
-                let result = syn::parse2(quote::quote!(::core::result::Result<#ty, #error>)).unwrap();
-                syn::ReturnType::Type(arrow, result)
-            }
-        }
+        self.args.ret(i)
     }
 
     fn fold_expr_return(&mut self, i: syn::ExprReturn) -> syn::ExprReturn {
         let ok = match &i.expr {
-            Some(expr)  => syn::parse2(quote::quote!(::core::result::Result::Ok(#expr))).unwrap(),
-            None        => syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap(),
+            Some(expr)  => ok(expr),
+            None        => ok_unit(),
         };
         syn::ExprReturn { expr: Some(Box::new(ok)), ..i }
     }
@@ -121,13 +117,13 @@ fn modify_tail(is_unit_fn: bool, stmts: &mut Vec<syn::Stmt>) {
             let new = syn::parse2(quote::quote!(#e;)).unwrap();
             stmts.pop();
             stmts.push(new);
-            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap()));
+            stmts.push(syn::Stmt::Expr(ok_unit()));
         }
         Some(syn::Stmt::Expr(e))    => {
-            *e = syn::parse2(quote::quote!(::core::result::Result::Ok(#e))).unwrap();
+            *e = ok(e);
         }
         _ if is_unit_fn             => {
-            stmts.push(syn::Stmt::Expr(syn::parse2(quote::quote!(::core::result::Result::Ok(()))).unwrap()));
+            stmts.push(syn::Stmt::Expr(ok_unit()));
         }
         _                           => { }
     }
@@ -143,4 +139,12 @@ fn is_unit_fn(i: &syn::ReturnType) -> bool {
             } else { false }
         }
     }
+}
+
+fn ok(expr: &syn::Expr) -> syn::Expr {
+    syn::parse2(quote::quote!(<_ as ::fehler::__internal::_Succeed>::from_ok(#expr))).unwrap()
+}
+
+fn ok_unit() -> syn::Expr {
+    syn::parse2(quote::quote!(<_ as ::fehler::__internal::_Succeed>::from_ok(()))).unwrap()
 }

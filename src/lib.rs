@@ -1,3 +1,5 @@
+#![no_std]
+#![cfg_attr(feature = "nightly", feature(try_trait))]
 #[doc(inline)]
 /// Annotations a function that "throws" a Result.
 ///
@@ -35,5 +37,106 @@ pub use fehler_macros::throws;
 /// This macro is equivalent to `Err($err)?`.
 #[macro_export]
 macro_rules! throw {
-    ($err:expr)   => (return ::core::result::Result::Err(::core::convert::From::from($err)))
+    ($err:expr)   => (return <_ as $crate::__internal::_Throw>::from_error((::core::convert::From::from($err))));
+    ()            => (return <_ as ::core::default::Default>::default());
+}
+
+#[doc(hidden)]
+pub mod __internal {
+    pub trait _Succeed {
+        type Ok;
+        fn from_ok(ok: Self::Ok) -> Self;
+    }
+
+    pub trait _Throw {
+        type Error;
+        fn from_error(error: Self::Error) -> Self;
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    mod stable {
+        use core::task::Poll;
+
+        impl<T, E> super::_Succeed for Result<T, E> {
+            type Ok = T;
+            fn from_ok(ok: T) -> Self {
+                Ok(ok)
+            }
+        }
+
+        impl<T, E> super::_Throw for Result<T, E> {
+            type Error = E;
+            fn from_error(error: Self::Error) -> Self {
+                Err(error)
+            }
+        }
+
+        impl<T, E> super::_Succeed for Poll<Result<T, E>> {
+            type Ok = Poll<T>;
+
+            fn from_ok(ok: Self::Ok) -> Self {
+                match ok {
+                    Poll::Ready(ok) => Poll::Ready(Ok(ok)),
+                    Poll::Pending   => Poll::Pending,
+                }
+            }
+        }
+
+        impl<T, E> super::_Throw for Poll<Result<T, E>> {
+            type Error = E;
+
+            fn from_error(error: Self::Error) -> Self {
+                Poll::Ready(Err(error))
+            }
+        }
+
+        impl<T, E> super::_Succeed for Poll<Option<Result<T, E>>> {
+            type Ok = Poll<Option<T>>;
+
+            fn from_ok(ok: Self::Ok) -> Self {
+                match ok {
+                    Poll::Ready(Some(ok))   => Poll::Ready(Some(Ok(ok))),
+                    Poll::Ready(None)       => Poll::Ready(None),
+                    Poll::Pending           => Poll::Pending,
+                }
+            }
+        }
+
+        impl<T, E> super::_Throw for Poll<Option<Result<T, E>>> {
+            type Error = E;
+
+            fn from_error(error: Self::Error) -> Self {
+                Poll::Ready(Some(Err(error)))
+            }
+        }
+
+        impl<T> super::_Succeed for Option<T> {
+            type Ok = T;
+
+            fn from_ok(ok: Self::Ok) -> Self {
+                Some(ok)
+            }
+        }
+    }
+
+    #[cfg(feature = "nightly")]
+    mod nightly {
+        use core::ops::Try;
+
+        impl<T> super::_Succeed for T where T: Try {
+            type Ok = <T as Try>::Ok;
+
+            fn from_ok(ok: Self::Ok) -> Self {
+                <T as Try>::from_ok(ok)
+            }
+        }
+
+        impl<T> super::_Throw for T where T: Try {
+            type Error = <T as Try>::Error;
+
+            fn from_error(error: Self::Error) -> Self {
+                <T as Try>::from_error(error)
+            }
+        }
+    }
 }

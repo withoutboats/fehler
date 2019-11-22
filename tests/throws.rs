@@ -77,3 +77,13 @@ pub async fn has_inner_async_block() {
     let f = async { 0 };
     let _: i32 = f.await;
 }
+
+#[throws(_ as Result)]
+pub fn throws_as_result() -> i32 {
+    0
+}
+
+#[throws(as std::io::Result)]
+pub fn throws_as_result_alias() -> i32 {
+    0
+}
