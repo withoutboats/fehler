@@ -52,6 +52,13 @@ impl Args {
 
 impl Parse for Args {
     fn parse(input: ParseStream) -> Result<Args> {
+        if input.is_empty() {
+            return Ok(Args {
+                error: Some(default_error()),
+                wrapper: Some(result()),
+            })
+        }
+
         let error = match input.peek(Token![as]) {
             true    => None,
             false   => {
@@ -102,5 +109,5 @@ fn result() -> Type {
 }
 
 fn default_error() -> Type {
-    syn::parse_str("crate::Error").unwrap()
+    syn::parse_str("Error").unwrap()
 }
