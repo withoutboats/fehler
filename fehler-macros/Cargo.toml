@@ -16,5 +16,5 @@ quote = "1.0.0"
 proc-macro2 = "1.0.0"
 
 [dependencies.syn]
-features = ["default", "fold", "full"]
+features = ["default", "fold", "full", "parsing"]
 version = "1.0.0"
