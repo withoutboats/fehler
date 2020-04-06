@@ -12,7 +12,4 @@ repository = "https://github.com/withoutboats/fehler"
 path = "./fehler-macros"
 version = "1.0.0-alpha.2"
 
-[features]
-nightly = []
-
 [workspace]
