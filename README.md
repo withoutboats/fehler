@@ -40,6 +40,23 @@ fn bar(x: bool) -> Result<i32, i32> {
 }
 ```
 
+## In functions that return `Option`
+
+The attribute can be used to make a function that returns an Option using the
+`as Option` syntax, demonstrated below:
+
+```rust
+// This function returns `Option<i32>`
+#[throws(as Option)]
+fn foo(x: bool) -> i32 {
+    if x {
+        return 0;
+    } else {
+        throw!();
+    }
+}
+```
+
 ### The `throw!` macro
 
 `throw!` is a macro which is equivalent to the `Err($e)?` pattern. It takes an
@@ -53,6 +70,8 @@ errors from these functions, you need to use this macro.
 
 * Make throws work on closures and async blocks (attributes are not allowed on
   expressions on stable)
+* Make throws work on Try types other than Result and Option (TRy is not on
+  stable).
 
 ## License
 
