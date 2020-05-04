@@ -39,13 +39,13 @@ impl Throws {
 impl Fold for Throws {
     fn fold_item_fn(&mut self, i: syn::ItemFn) -> syn::ItemFn {
         if !self.outer_fn { return i; }
-        self.outer_fn = false;
 
         let sig = syn::Signature {
             output: self.fold_return_type(i.sig.output),
             ..i.sig
         };
 
+        self.outer_fn = false;
 
         let inner = self.fold_block(*i.block);
         let block = Box::new(make_fn_block(&inner));
@@ -55,12 +55,13 @@ impl Fold for Throws {
 
     fn fold_impl_item_method(&mut self, i: syn::ImplItemMethod) -> syn::ImplItemMethod {
         if !self.outer_fn { return i; }
-        self.outer_fn = false;
 
         let sig = syn::Signature {
             output: self.fold_return_type(i.sig.output),
             ..i.sig
         };
+
+        self.outer_fn = false;
 
         let inner = self.fold_block(i.block);
         let block = make_fn_block(&inner);
@@ -70,6 +71,12 @@ impl Fold for Throws {
 
     fn fold_trait_item_method(&mut self, mut i: syn::TraitItemMethod) -> syn::TraitItemMethod {
         if !self.outer_fn { return i; }
+
+        let sig = syn::Signature {
+            output: self.fold_return_type(i.sig.output),
+            ..i.sig
+        };
+
         self.outer_fn = false;
 
         let default = i.default.take().map(|block| {
@@ -77,10 +84,6 @@ impl Fold for Throws {
             make_fn_block(&inner)
         });
 
-        let sig = syn::Signature {
-            output: self.fold_return_type(i.sig.output),
-            ..i.sig
-        };
 
         syn::TraitItemMethod { sig, default, ..i }
     }
@@ -94,6 +97,7 @@ impl Fold for Throws {
     }
 
     fn fold_return_type(&mut self, i: syn::ReturnType) -> syn::ReturnType {
+        if !self.outer_fn { return i; }
         self.args.ret(i)
     }
 
