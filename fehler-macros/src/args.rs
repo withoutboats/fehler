@@ -2,6 +2,7 @@
 //
 // It is also responsible for transforming the return type by injecting
 // the return type and the error type into the wrapper type.
+use std::mem;
 
 use proc_macro2::Span;
 use syn::{GenericArgument, Path, PathArguments, ReturnType, Token, Type};
@@ -12,24 +13,49 @@ const WRAPPER_MUST_BE_PATH: &str = "Wrapper type must be a normal path type";
 pub struct Args {
     error: Option<Type>,
     wrapper: Option<Type>,
+    pub propane_integration: bool,
 }
 
 impl Args {
-    pub fn ret(&mut self, ret: ReturnType) -> ReturnType {
-        let (arrow, ret) = match ret {
-            ReturnType::Default         => (arrow(), unit()),
-            ReturnType::Type(arrow, ty) => (arrow, *ty),
-        };
-        ReturnType::Type(arrow, Box::new(self.inject_to_wrapper(ret)))
-
+    pub fn ret(&mut self, mut ret: ReturnType) -> ReturnType {
+        if self.propane_integration {
+            self.propane_ret(&mut ret);
+            ret
+        } else {
+            let (arrow, mut ret) = match ret {
+                ReturnType::Default         => (arrow(), unit()),
+                ReturnType::Type(arrow, ty) => (arrow, *ty),
+            };
+            self.inject_to_wrapper(&mut ret);
+            ReturnType::Type(arrow, Box::new(ret))
+        }
     }
 
-    fn inject_to_wrapper(&mut self, ret: Type) -> Type {
-        if let Some(Type::Path(mut wrapper)) = self.wrapper.take() {
+    fn propane_ret(&mut self, ret: &mut ReturnType) {
+        if let syn::ReturnType::Type(_, ty) = ret {
+          if let syn::Type::Paren(syn::TypeParen { elem, .. }) = &mut **ty {
+            if let syn::Type::ImplTrait(ty) = &mut **elem {
+              if let syn::TypeParamBound::Trait(bound) = &mut ty.bounds[0] {
+                let bound = bound.path.segments.last_mut().unwrap();
+                if let syn::PathArguments::AngleBracketed(args) = &mut bound.arguments {
+                  if let syn::GenericArgument::Binding(binding) = &mut args.args[0] {
+                    let ty = &mut binding.ty;
+                    self.inject_to_wrapper(ty);
+                  }
+                }
+              }
+            }
+          }
+        }
+    }
+
+    fn inject_to_wrapper(&mut self, ret: &mut Type) {
+        let ty = mem::replace(ret, Type::Never(syn::TypeNever { bang_token: Default::default() }));
+        let ty = if let Some(Type::Path(mut wrapper)) = self.wrapper.take() {
             let types = if let Some(error) = self.error.take() {
-                vec![ret, error].into_iter().map(GenericArgument::Type)
+                vec![ty, error].into_iter().map(GenericArgument::Type)
             } else {
-                vec![ret].into_iter().map(GenericArgument::Type)
+                vec![ty].into_iter().map(GenericArgument::Type)
             };
 
             match innermost_path_arguments(&mut wrapper.path) {
@@ -46,16 +72,26 @@ impl Args {
             }
 
             Type::Path(wrapper)
-        } else { panic!(WRAPPER_MUST_BE_PATH) }
+        } else { panic!(WRAPPER_MUST_BE_PATH) };
+        *ret = ty;
     }
 }
 
 impl Parse for Args {
     fn parse(input: ParseStream) -> Result<Args> {
+        let propane_integration = input.peek(Token![@]);
+
+        if propane_integration {
+            input.parse::<syn::token::At>().unwrap();
+            let ident: syn::Ident = input.parse()?;
+            assert_eq!(ident, "__internal_propane_integration");
+        };
+
         if input.is_empty() {
             return Ok(Args {
                 error: Some(default_error()),
                 wrapper: Some(result()),
+                propane_integration,
             })
         }
 
@@ -75,7 +111,7 @@ impl Parse for Args {
             false   => result(),
         });
 
-        Ok(Args { error, wrapper })
+        Ok(Args { error, wrapper, propane_integration })
     }
 }
 

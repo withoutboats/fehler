@@ -14,4 +14,11 @@ keywords = ["error-handling", "exceptions"]
 path = "./fehler-macros"
 version = "1.0.0"
 
+[dev-dependencies]
+futures-core = "0.3.5"
+
+[dev-dependencies.propane]
+path = "./fake-propane"
+package = "fake-propane"
+
 [workspace]

@@ -99,6 +99,28 @@ macro_rules! throw {
 }
 
 #[doc(hidden)]
+#[macro_export]
+macro_rules! gen_throw {
+    ($err:expr)   => (yield <_ as $crate::__internal::_Throw>::from_error((::core::convert::From::from($err))));
+    ()            => (yield <_ as ::core::default::Default>::default());
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! async_gen_throw {
+    ($err:expr)   => (yield core::Poll::Ready(<_ as $crate::__internal::_Throw>::from_error((::core::convert::From::from($err)))));
+    ()            => (yield core::Poll::Ready(<_ as ::core::default::Default>::default()));
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! async_gen_yield_fehler {
+    ($e:expr) => {{
+        yield core::task::Poll::Ready(<_ as ::fehler::__internal::_Succeed>::from_ok($e))
+    }}
+}
+
+#[doc(hidden)]
 pub mod __internal {
     pub trait _Succeed {
         type Ok;
